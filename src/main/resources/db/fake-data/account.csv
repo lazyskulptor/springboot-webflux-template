@@ -1,0 +1,4 @@
+'id';'username';'password';'email';'first_name';'last_name';'enabled';'created_at';'updated_at'
+1;testuser;1234;testuser@email.com;first1;last1;true;'2022-09-23 20:19:34';'2022-09-23 20:19:34'
+2;testuser2;1234;testuser2@email.com;first2;last2;true;'2022-09-23 01:05:44';'2022-09-23 01:05:44'
+3;testuser3;1234;testuser3@email.com;first3;last3;false;'2022-09-13 02:51:41';'2022-09-13 02:51:41'
