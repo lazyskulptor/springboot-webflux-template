@@ -14,7 +14,7 @@ import java.util.Set;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@ToString
+@ToString(exclude = "authorities")
 public class Account {
 
 	@Id
@@ -34,7 +34,7 @@ public class Account {
 	private Boolean enabled;
 
 	@CollectionTable(name = "authority", joinColumns = @JoinColumn(name = "account_id"))
-	@ElementCollection(fetch = FetchType.EAGER)
+	@ElementCollection(fetch = FetchType.LAZY)
 	@Column(name = "authority_name")
 	@Enumerated(EnumType.STRING)
 	private Set<Authority> authorities;

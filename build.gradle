@@ -25,6 +25,8 @@ ext {
 }
 
 dependencies {
+	implementation 'io.smallrye.reactive:mutiny-reactor:2.1.0'
+	implementation 'org.springframework.data:spring-data-commons'
 	implementation "org.hibernate.reactive:hibernate-reactive-core:1.1.9.Final"
 	implementation "io.vertx:vertx-mysql-client:4.4.1"
 	runtimeOnly "mysql:mysql-connector-java:8.0.32"
