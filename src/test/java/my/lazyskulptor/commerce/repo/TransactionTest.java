@@ -65,7 +65,7 @@ public class TransactionTest {
 
         var persisted = sessionFactory.withTransaction(session -> {
             var mono = accountCmd.save(entity).log("AFTER SAVE")
-                    .then(accountCmd.flush().singleOptional())
+                    .then(CommandRepository.flush(accountCmd).singleOptional())
                     .flatMap(_saved -> accountRepository.findOne(new IdEqualsSpec(entity.getId()))).log("IN FLATMAP")
                     .contextWrite(c -> c.put("SESSION", session));
             return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);

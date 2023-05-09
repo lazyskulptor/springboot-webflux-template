@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 
-public interface BasicQueryRepository<T> {
+public interface QueryRepository<T> {
     Mono<T> findOne(Spec<T> spec);
 
     Mono<List<T>> findList(Spec<T> spec, Pageable page);
@@ -17,4 +17,8 @@ public interface BasicQueryRepository<T> {
     Mono<Boolean> exists(Spec<T> spec);
 
     Mono<Long> count(Spec<T> spec);
+
+    static <A> Mono<A> fetch(SessionRepository sessionRepository, A association) {
+        return TemplateUtils.INSTANCE.template(sessionRepository.getSessionFactory(), ss -> ss.fetch(association));
+    }
 }

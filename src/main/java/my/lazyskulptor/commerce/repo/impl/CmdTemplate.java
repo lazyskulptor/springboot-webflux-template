@@ -1,13 +1,15 @@
 package my.lazyskulptor.commerce.repo.impl;
 
 import io.smallrye.mutiny.Uni;
-import my.lazyskulptor.commerce.repo.BasicCmdRepository;
+import my.lazyskulptor.commerce.repo.CommandRepository;
+import my.lazyskulptor.commerce.repo.SessionRepository;
+import my.lazyskulptor.commerce.repo.TemplateUtils;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.slf4j.Logger;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public abstract class CmdTemplate<ID, T> implements BasicCmdRepository<ID, T> {
+public abstract class CmdTemplate<ID, T> implements CommandRepository<ID, T>, SessionRepository {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(CmdTemplate.class);
 
     private final Mutiny.SessionFactory sessionFactory;
@@ -47,15 +49,6 @@ public abstract class CmdTemplate<ID, T> implements BasicCmdRepository<ID, T> {
     }
 
     @Override
-    public Mono<Void> flush() {
-        return TemplateUtils.INSTANCE.template(sessionFactory, ss -> ss.flush());
-    }
-
-    public <T> Mono<T> fetch(T association) {
-        return TemplateUtils.INSTANCE.template(sessionFactory, ss -> ss.fetch(association));
-    }
-
-    @Override
     public Mono<Void> deleteById(ID id) {
         return TemplateUtils.INSTANCE
                 .template(sessionFactory, ss -> ss.find(classType, id).flatMap(ss::remove));
@@ -67,5 +60,9 @@ public abstract class CmdTemplate<ID, T> implements BasicCmdRepository<ID, T> {
                 TemplateUtils.INSTANCE
                         .template(sessionFactory, ss -> ss.find(classType, list.toArray())
                                 .flatMap(ss::removeAll)));
+    }
+
+    public Mutiny.SessionFactory getSessionFactory() {
+        return sessionFactory;
     }
 }

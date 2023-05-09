@@ -1,6 +1,8 @@
 package my.lazyskulptor.commerce.repo.impl;
 
-import my.lazyskulptor.commerce.repo.BasicQueryRepository;
+import my.lazyskulptor.commerce.repo.QueryRepository;
+import my.lazyskulptor.commerce.repo.SessionRepository;
+import my.lazyskulptor.commerce.repo.TemplateUtils;
 import my.lazyskulptor.commerce.spec.Spec;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.slf4j.Logger;
@@ -17,7 +19,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class QueryTemplate<T> implements BasicQueryRepository<T> {
+public abstract class QueryTemplate<T> implements QueryRepository<T> , SessionRepository {
     private static final Logger log = org.slf4j.LoggerFactory.getLogger(QueryTemplate.class);
     private final Mutiny.SessionFactory sessionFactory;
 
@@ -108,5 +110,9 @@ public abstract class QueryTemplate<T> implements BasicQueryRepository<T> {
 
         Predicate predicate = spec.toPredicate(root, query, builder);
         return Tuples.of(query, predicate, root);
+    }
+
+    public Mutiny.SessionFactory getSessionFactory() {
+        return sessionFactory;
     }
 }

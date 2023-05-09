@@ -3,7 +3,7 @@ package my.lazyskulptor.commerce.repo;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public interface BasicCmdRepository<ID, T> {
+public interface CommandRepository<ID, T> {
 
     <S extends T> Mono<Void> save(S entity);
 
@@ -13,11 +13,11 @@ public interface BasicCmdRepository<ID, T> {
 
     <S extends T> Flux<T> saveAllAndFlush(Flux<S> entity);
 
-    Mono<Void> flush();
-
-    <T> Mono<T> fetch(T association);
-
     Mono<Void> deleteById(ID id);
 
     Mono<Void> deleteAllById(Flux<ID> id);
+
+    static Mono<Void> flush(SessionRepository sessionRepository) {
+        return TemplateUtils.INSTANCE.template(sessionRepository.getSessionFactory(), ss -> ss.flush());
+    }
 }
