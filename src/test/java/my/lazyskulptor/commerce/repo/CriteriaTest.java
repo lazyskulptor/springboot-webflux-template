@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
 import my.lazyskulptor.commerce.ContainerExtension;
+import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
 import my.lazyskulptor.commerce.repo.impl.AccountRepositoryImpl;
 import my.lazyskulptor.commerce.spec.Spec;
@@ -18,10 +19,6 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
 import java.util.function.Function;
 
 @SpringBootTest
@@ -37,17 +34,7 @@ public class CriteriaTest {
         this.accountRepository = new AccountRepositoryImpl(sessionFactory);
     }
 
-    private Spec<Account> idEquals = new Spec<>() {
-        @Override
-        public boolean isSatisfiedBy(Account o) {
-            return false;
-        }
-
-        @Override
-        public Predicate toPredicate(Root<Account> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-            return criteriaBuilder.equal(root.get("id"), 1L);
-        }
-    };
+    private Spec<Account> idEquals = new IdEqualsSpec(1L);
 
     @Test
     void testCriteria() {
@@ -63,18 +50,18 @@ public class CriteriaTest {
                 .log("Open Session in TX")
                 .convert().with(UniReactorConverters.toMono());
 
-        var result = Mono.zip(accountRepository.findList(idEquals, Pageable.ofSize(20)),
+        var result = tx.flatMap(session -> Mono.zip(accountRepository.findList(idEquals, Pageable.ofSize(20)),
                         accountRepository.findList(idEquals, null))
                 .flatMap(t -> {
-                    var acc = t.getT1().stream().findFirst().get();
+                    Account acc = t.getT1().stream().findFirst().get();
                     System.out.println("Total : " + t.getT2());
 
                     return Mutiny.fetch(acc.getAuthorities())
                             .convert().with(UniReactorConverters.toMono())
                             .thenReturn(acc);
                 })
-                .doFinally(_s -> tx.flatMap(ss -> ss.close().log("Close Session").convert().with(UniReactorConverters.toMono())).subscribe())
-                .contextWrite(c -> c.put("SESSION", tx))
+                .doFinally(_s -> session.close().log("Close Session").convert().with(UniReactorConverters.toMono()).subscribe())
+                .contextWrite(c -> c.put("SESSION", session)))
                 .block();
 
         assertThat(result.getEmail()).isNotBlank();
@@ -89,10 +76,10 @@ public class CriteriaTest {
 
         Exception thrown = null;
         try {
-            Mono.zip(accountRepository.findList(idEquals, Pageable.ofSize(20)),
+            tx.flatMap(session -> Mono.zip(accountRepository.findList(idEquals, Pageable.ofSize(20)),
                             accountRepository.findList(idEquals, null))
                     .flatMap(t -> {
-                        var acc = t.getT1().stream().findFirst().get();
+                        Account acc = t.getT1().stream().findFirst().get();
                         System.out.println("Total : " + t.getT2());
 
                         // using fetch method in session not work
@@ -100,8 +87,8 @@ public class CriteriaTest {
                                         .convert().with(UniReactorConverters.toMono()))
                                 .thenReturn(acc);
                     })
-                    .doFinally(_s -> tx.flatMap(ss -> ss.close().log("Close Session").convert().with(UniReactorConverters.toMono())).subscribe())
-                    .contextWrite(c -> c.put("SESSION", tx))
+                    .doFinally(_s -> session.close().log("Close Session").convert().with(UniReactorConverters.toMono()).subscribe())
+                    .contextWrite(c -> c.put("SESSION", session)))
                     .block();
         } catch (Exception e) {
             thrown = e;
@@ -115,7 +102,7 @@ public class CriteriaTest {
             var mono = Mono.zip(accountRepository.findList(idEquals, Pageable.ofSize(20)),
                             accountRepository.findList(idEquals, null))
                     .flatMap(t -> {
-                        var acc = t.getT1().stream().findFirst().get();
+                        Account acc = t.getT1().stream().findFirst().get();
                         System.out.println("Total : " + t.getT2());
 
                         // using fetch method in session not work
@@ -123,7 +110,7 @@ public class CriteriaTest {
                                 .convert().with(UniReactorConverters.toMono())
                                 .thenReturn(acc);
                     })
-                    .contextWrite(c -> c.put("SESSION", Mono.just(session)));
+                    .contextWrite(c -> c.put("SESSION", session));
             return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
         }).await().indefinitely();
 
@@ -139,7 +126,7 @@ public class CriteriaTest {
             var mono = Mono.zip(accountRepository.findList(idEquals, Pageable.ofSize(20)),
                             accountRepository.findList(idEquals, null))
                     .map(t -> {
-                        var acc = t.getT1().stream().findFirst().get();
+                        Account acc = t.getT1().stream().findFirst().get();
                         System.out.println("Total : " + t.getT2());
 
                         // using fetch method in session not work
@@ -147,13 +134,13 @@ public class CriteriaTest {
                     })
                     .transformDeferredContextual((accountMono, contextView) -> {
                         return accountMono.flatMap(acc -> {
-                            Mono<Mutiny.Session> session1 = contextView.get("SESSION");
-                            return session1.flatMap(ss -> ss.fetch(acc.getAuthorities())
-                                            .convert().with(UniReactorConverters.toMono()))
+                            Mutiny.Session session1 = contextView.get("SESSION");
+                            return session1.fetch(acc.getAuthorities())
+                                            .convert().with(UniReactorConverters.toMono())
                                     .thenReturn(acc);
                         });
                     })
-                    .contextWrite(c -> c.put("SESSION", Mono.just(session)));
+                    .contextWrite(c -> c.put("SESSION", session));
             return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
         }).await().indefinitely();
 
