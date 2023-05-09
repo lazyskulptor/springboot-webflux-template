@@ -2,7 +2,7 @@ package my.lazyskulptor.commerce.repo;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
-import org.hibernate.LazyInitializationException;
+import org.hibernate.SessionException;
 import org.hibernate.reactive.mutiny.Mutiny;
 import reactor.core.publisher.Mono;
 
@@ -18,7 +18,7 @@ public enum TemplateUtils {
                         .log(new StringBuilder("GLOBAL SESSION[").append(session.hashCode()).append("]").toString()))
 
                 .orElseGet(() -> Optional.ofNullable(sessionFactory)
-                        .orElseThrow(() -> new LazyInitializationException("Session not exists"))
+                        .orElseThrow(() -> new SessionException("Session not exists"))
                         .withSession(session -> f.apply(session).call(session::flush)
                                 .log(new StringBuilder("LOCAL SESSION[").append(session.hashCode()).append("]").toString())))
                 .convert().with(UniReactorConverters.toMono())
