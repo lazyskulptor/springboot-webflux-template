@@ -23,7 +23,7 @@ public class IdEqualsSpec implements Spec<Account> {
     }
 
     @Override
-    public Predicate toPredicate(Root<Account> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+    public Predicate toPredicate(Root<?> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
         return criteriaBuilder.equal(root.get("id"), this.id);
     }
 }

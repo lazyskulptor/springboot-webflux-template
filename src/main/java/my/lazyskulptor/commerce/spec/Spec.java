@@ -4,6 +4,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
+import java.util.Arrays;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,17 +32,19 @@ public interface Spec<T> {
     }
 
     boolean isSatisfiedBy(T o);
-    Predicate toPredicate(Root<T> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder);
+    Predicate toPredicate(Root<?> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder);
 
     private static <S> Function<Spec<S>[], Predicate[]> merge(Root<S> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
         return specs -> Stream.of(specs)
                 .map(r -> r.toPredicate(root, query, criteriaBuilder))
-                .collect(Collectors.toList())
+                .toList()
                 .toArray(new Predicate[]{});
     }
+
     static <S> Spec<S> not(Spec<S> o) {
         return new NotSpec<>(o);
     }
+
     class AndSpec<S> implements Spec<S> {
         private final Spec<S> left;
         private final Spec<S>[] right;
@@ -57,8 +60,10 @@ public interface Spec<T> {
         }
 
         @Override
-        public Predicate toPredicate(Root<S> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-            Predicate predicates = criteriaBuilder.and(Spec.merge(root, query, criteriaBuilder).apply(right));
+        public Predicate toPredicate(Root<?> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+            Predicate predicates = criteriaBuilder.and(Spec.merge(root, query, criteriaBuilder)
+                    .apply(Arrays.stream(right).map(sSpec -> sSpec.toPredicate(root, query, criteriaBuilder))
+                            .toList().toArray(Spec[]::new)));
             return criteriaBuilder.and(left.toPredicate(root, query, criteriaBuilder), predicates);
         }
     }
@@ -77,8 +82,10 @@ public interface Spec<T> {
         }
 
         @Override
-        public Predicate toPredicate(Root<S> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-            Predicate predicates = criteriaBuilder.or(Spec.merge(root, query, criteriaBuilder).apply(right));
+        public Predicate toPredicate(Root<?> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+            Predicate predicates = criteriaBuilder.or(Spec.merge(root, query, criteriaBuilder)
+                    .apply(Arrays.stream(right).map(sSpec -> sSpec.toPredicate(root, query, criteriaBuilder))
+                            .collect(Collectors.toList()).toArray(Spec[]::new)));
             return criteriaBuilder.or(left.toPredicate(root, query, criteriaBuilder), predicates);
         }
     }
@@ -94,7 +101,7 @@ public interface Spec<T> {
         }
 
         @Override
-        public Predicate toPredicate(Root<S> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+        public Predicate toPredicate(Root<?> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
             return criteriaBuilder.not(original.toPredicate(root, query, criteriaBuilder));
         }
     }

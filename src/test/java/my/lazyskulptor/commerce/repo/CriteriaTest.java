@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
+import my.lazyskulptor.adapter.DemoTxManager;
 import my.lazyskulptor.commerce.ContainerExtension;
 import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
@@ -19,6 +20,7 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Mono;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 @SpringBootTest
@@ -31,14 +33,13 @@ public class CriteriaTest {
 
     @BeforeEach
     void setup() {
-        this.accountRepository = new AccountRepositoryImpl(sessionFactory);
+        this.accountRepository = new AccountRepositoryImpl(new DemoTxManager(sessionFactory));
     }
 
-    private Spec<Account> idEquals = new IdEqualsSpec(1L);
+    private final Spec<Account> idEquals = new IdEqualsSpec(1L);
 
     @Test
     void testCriteria() {
-        System.out.println("ATTENTION");
         Account account = accountRepository.findOne(idEquals).block();
 
         System.out.println(account);
@@ -60,8 +61,8 @@ public class CriteriaTest {
                             .convert().with(UniReactorConverters.toMono())
                             .thenReturn(acc);
                 })
-                .doFinally(_s -> session.close().log("Close Session").convert().with(UniReactorConverters.toMono()).subscribe())
-                .contextWrite(c -> c.put("SESSION", session)))
+                .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference<>(session)))
+                        .doFinally(_s -> session.close().log("Close Session").convert().with(UniReactorConverters.toMono()).subscribe()))
                 .block();
 
         assertThat(result.getEmail()).isNotBlank();
@@ -88,7 +89,7 @@ public class CriteriaTest {
                                 .thenReturn(acc);
                     })
                     .doFinally(_s -> session.close().log("Close Session").convert().with(UniReactorConverters.toMono()).subscribe())
-                    .contextWrite(c -> c.put("SESSION", session)))
+                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference<>(session))))
                     .block();
         } catch (Exception e) {
             thrown = e;
@@ -110,7 +111,7 @@ public class CriteriaTest {
                                 .convert().with(UniReactorConverters.toMono())
                                 .thenReturn(acc);
                     })
-                    .contextWrite(c -> c.put("SESSION", session));
+                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference<>(session)));
             return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
         }).await().indefinitely();
 
@@ -134,13 +135,13 @@ public class CriteriaTest {
                     })
                     .transformDeferredContextual((accountMono, contextView) -> {
                         return accountMono.flatMap(acc -> {
-                            Mutiny.Session session1 = contextView.get("SESSION");
+                            Mutiny.Session session1 = contextView.<AtomicReference<Mutiny.Session>>get(DemoTxManager.SESSION_KEY).get();
                             return session1.fetch(acc.getAuthorities())
                                             .convert().with(UniReactorConverters.toMono())
                                     .thenReturn(acc);
                         });
                     })
-                    .contextWrite(c -> c.put("SESSION", session));
+                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference<>(session)));
             return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
         }).await().indefinitely();
 

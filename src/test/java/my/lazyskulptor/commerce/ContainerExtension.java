@@ -19,13 +19,10 @@ public class ContainerExtension implements BeforeAllCallback {
     public void beforeAll(ExtensionContext context) {
         if (!started.get()) {
             container.start();
-            System.setProperty("jakarta.persistence.jdbc.driver", container.getDriverClassName());
-            System.setProperty("jakarta.persistence.jdbc.url", container.getJdbcUrl());
-            System.setProperty("jakarta.persistence.jdbc.user", container.getUsername());
-            System.setProperty("jakarta.persistence.jdbc.password", container.getPassword());
-            System.setProperty("spring.liquibase.url", container.getJdbcUrl());
-            System.setProperty("spring.liquibase.user", container.getUsername());
-            System.setProperty("spring.liquibase.password", container.getPassword());
+            System.setProperty("spring.datasource.driver-class-name", container.getDriverClassName());
+            System.setProperty("spring.datasource.url", container.getJdbcUrl());
+            System.setProperty("spring.datasource.username", container.getUsername());
+            System.setProperty("spring.datasource.password", container.getPassword());
             started.set(true);
         }
     }

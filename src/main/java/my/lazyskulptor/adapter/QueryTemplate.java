@@ -1,8 +1,5 @@
-package my.lazyskulptor.commerce.repo.impl;
+package my.lazyskulptor.adapter;
 
-import my.lazyskulptor.commerce.repo.QueryRepository;
-import my.lazyskulptor.commerce.repo.SessionRepository;
-import my.lazyskulptor.commerce.repo.TemplateUtils;
 import my.lazyskulptor.commerce.spec.Spec;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.slf4j.Logger;
@@ -19,81 +16,82 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class QueryTemplate<T> implements QueryRepository<T> , SessionRepository {
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(QueryTemplate.class);
+public abstract class QueryTemplate<T, ID> implements QueryRepository<T, ID> {
     private final Mutiny.SessionFactory sessionFactory;
 
+    private final SessionDispatcher dispatcher;
+
     private final Class<T> classType;
-    public QueryTemplate(Mutiny.SessionFactory sessionFactory, Class<T> classType) {
-        this.sessionFactory = sessionFactory;
+    public QueryTemplate(Class<T> classType, SessionDispatcher dispatcher) {
+        this.sessionFactory = dispatcher.getSessionFactory();
         this.classType = classType;
+        this.dispatcher = dispatcher;
     }
 
     @Override
-    public Mono<T> findOne(Spec<T> spec) {
-        return TemplateUtils.INSTANCE.template(sessionFactory, ss -> ss.createQuery(toQuery(spec)).getSingleResult());
+    public Mono<T> findOne(Spec<?> spec) {
+        return this.dispatcher.apply(ss -> ss.createQuery(toQuery(spec)).getSingleResult());
     }
 
     @Override
-    public Mono<Long> count(Spec<T> spec) {
-        return TemplateUtils.INSTANCE.template(sessionFactory, ss -> ss.createQuery(toCounter(spec)).getSingleResult());
+    public Mono<Long> count(Spec<?> spec) {
+        return this.dispatcher.apply(ss -> ss.createQuery(toCounter(spec)).getSingleResult());
     }
 
     @Override
-    public Mono<List<T>> findList(Spec<T> spec, Pageable page) {
+    public Mono<List<T>> findList(Spec<?> spec, Pageable page) {
         final Pageable p = ensurePage(page);
         final CriteriaQuery<T> query = toQuery(spec, p);
 
-        return TemplateUtils.INSTANCE.template(sessionFactory, ss -> ss.createQuery(query)
+        return this.dispatcher.apply(ss -> ss.createQuery(query)
                 .setMaxResults(p.getPageSize())
                 .setFirstResult((int) p.getOffset())
                 .getResultList());
     }
     @Override
-    public Mono<Page<T>> findPage(Spec<T> spec, Pageable page) {
+    public Mono<Page<T>> findPage(Spec<?> spec, Pageable page) {
         final Pageable p = ensurePage(page);
         return Mono.zip(this.findList(spec, page), this.count(spec))
                 .map(t -> new PageImpl<>(t.getT1(), p, t.getT2()));
     }
     @Override
-    public Mono<Boolean> exists(Spec<T> spec) {
+    public Mono<Boolean> exists(Spec<?> spec) {
         return this.count(spec).map(cnt -> cnt > 0);
     }
 
     private Pageable ensurePage(Pageable page) {
         int DEFAULT_PAGE_SIZE = 20;
-        final Pageable p = Objects.requireNonNullElse(page, Pageable.ofSize(DEFAULT_PAGE_SIZE));
-        return p;
+        return Objects.requireNonNullElse(page, Pageable.ofSize(DEFAULT_PAGE_SIZE));
     }
 
-    private CriteriaQuery<T> toQuery(Spec<T> spec) {
+    private CriteriaQuery<T> toQuery(Spec<?> spec) {
         return toQuery(spec, null);
     }
 
-    private CriteriaQuery<T> toQuery(Spec<T> spec, Pageable page) {
+    private CriteriaQuery<T> toQuery(Spec<?> spec, Pageable page) {
         var tuple3 = criteriaTemplate(spec, page);
         return tuple3.getT1().where(tuple3.getT2()).select(tuple3.getT3());
     }
 
-    private CriteriaQuery<Long> toCounter(Spec<T> spec) {
+    private CriteriaQuery<Long> toCounter(Spec<?> spec) {
         var tuple3 = criteriaTemplate(b -> b.createQuery(Long.class), spec, null);
         Expression<Long> counter = sessionFactory.getCriteriaBuilder().count(tuple3.getT3());
         return tuple3.getT1().where(tuple3.getT2()).select(counter);
     }
 
-    protected Tuple3<CriteriaQuery<T>, Predicate, Root<T>> criteriaTemplate(Spec<T> spec) {
+    protected Tuple3<CriteriaQuery<T>, Predicate, Root<T>> criteriaTemplate(Spec<?> spec) {
         return criteriaTemplate(spec, null);
     }
 
-    protected Tuple3<CriteriaQuery<T>, Predicate, Root<T>> criteriaTemplate(Spec<T> spec, Pageable page) {
+    protected Tuple3<CriteriaQuery<T>, Predicate, Root<T>> criteriaTemplate(Spec<?> spec, Pageable page) {
         return criteriaTemplate((b) -> b.createQuery(this.classType), spec, page);
     }
 
-    protected <S> Tuple3<CriteriaQuery<S>, Predicate, Root<T>> criteriaTemplate(Function<CriteriaBuilder, CriteriaQuery<S>> applier, Spec<T> spec) {
+    protected <S> Tuple3<CriteriaQuery<S>, Predicate, Root<T>> criteriaTemplate(Function<CriteriaBuilder, CriteriaQuery<S>> applier, Spec<?> spec) {
         return criteriaTemplate(applier, spec, null);
     }
 
-    protected <S> Tuple3<CriteriaQuery<S>, Predicate, Root<T>> criteriaTemplate(Function<CriteriaBuilder, CriteriaQuery<S>> applier, Spec<T> spec, Pageable page) {
+    protected <S> Tuple3<CriteriaQuery<S>, Predicate, Root<T>> criteriaTemplate(Function<CriteriaBuilder, CriteriaQuery<S>> applier, Spec<?> spec, Pageable page) {
         CriteriaBuilder builder = sessionFactory.getCriteriaBuilder();
         CriteriaQuery<S> query = applier.apply(builder);
         Root<T> root = query.from(this.classType);
@@ -112,7 +110,9 @@ public abstract class QueryTemplate<T> implements QueryRepository<T> , SessionRe
         return Tuples.of(query, predicate, root);
     }
 
-    public Mutiny.SessionFactory getSessionFactory() {
-        return sessionFactory;
+
+    @Override
+    public SessionDispatcher getSessionDispatcher() {
+        return this.dispatcher;
     }
 }

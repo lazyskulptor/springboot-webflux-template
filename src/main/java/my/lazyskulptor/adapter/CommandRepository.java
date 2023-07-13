@@ -1,9 +1,11 @@
-package my.lazyskulptor.commerce.repo;
+package my.lazyskulptor.adapter;
 
+import org.springframework.data.repository.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-public interface CommandRepository<ID, T> {
+
+public interface CommandRepository<ID, T> extends Repository, SessionRepository {
 
     <S extends T> Mono<Void> save(S entity);
 
@@ -16,8 +18,4 @@ public interface CommandRepository<ID, T> {
     Mono<Void> deleteById(ID id);
 
     Mono<Void> deleteAllById(Flux<ID> id);
-
-    static Mono<Void> flush(SessionRepository sessionRepository) {
-        return TemplateUtils.INSTANCE.template(sessionRepository.getSessionFactory(), ss -> ss.flush());
-    }
 }
