@@ -5,4 +5,4 @@ pluginManagement {
 		gradlePluginPortal()
 	}
 }
-rootProject.name = 'commerce'
+rootProject.name = 'webflux-template-hb'

@@ -25,6 +25,8 @@ ext {
 }
 
 dependencies {
+	implementation 'org.springframework:spring-tx'
+	implementation 'org.springframework:spring-jdbc'
 	implementation 'io.smallrye.reactive:mutiny-reactor:2.1.0'
 	implementation 'org.springframework.data:spring-data-commons'
 	implementation "org.hibernate.reactive:hibernate-reactive-core:1.1.9.Final"

@@ -34,6 +34,7 @@ public class PersistenceTest {
         var persisted = sessionFactory.withSession(session -> session.find(Account.class, account.getId()))
                 .await().indefinitely();
 
+        System.out.println(account);
         assertThat(persisted).isNotEqualTo(account);
         assertThat(persisted.getPassword()).isEqualTo(account.getPassword());
     }
