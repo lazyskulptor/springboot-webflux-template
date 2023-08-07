@@ -1,5 +1,8 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.autoconfigure;
 
+import my.lazyskulptor.adapter.DefaultSessionDispatcher;
+import my.lazyskulptor.adapter.HibernateReactiveTransactionManager;
+import my.lazyskulptor.adapter.SessionDispatcher;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

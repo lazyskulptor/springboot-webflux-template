@@ -2,9 +2,11 @@ package my.lazyskulptor.adapter;
 
 import io.smallrye.mutiny.Uni;
 import org.hibernate.reactive.mutiny.Mutiny;
+import org.springframework.data.repository.NoRepositoryBean;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@NoRepositoryBean
 public abstract class CmdTemplate<ID, T> implements CommandRepository<ID, T> {
     private final Mutiny.SessionFactory sessionFactory;
 

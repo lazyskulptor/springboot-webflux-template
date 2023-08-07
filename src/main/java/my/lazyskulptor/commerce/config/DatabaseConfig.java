@@ -1,6 +1,6 @@
 package my.lazyskulptor.commerce.config;
 
-import my.lazyskulptor.adapter.EnableHibernateReactiveSpringAdapter;
+import my.lazyskulptor.adapter.autoconfigure.EnableHibernateReactiveSpringAdapter;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;

@@ -1,10 +1,12 @@
 package my.lazyskulptor.adapter;
 
+import org.springframework.data.repository.NoRepositoryBean;
 import org.springframework.data.repository.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 
+@NoRepositoryBean
 public interface CommandRepository<ID, T> extends Repository, SessionRepository {
 
     <S extends T> Mono<Void> save(S entity);

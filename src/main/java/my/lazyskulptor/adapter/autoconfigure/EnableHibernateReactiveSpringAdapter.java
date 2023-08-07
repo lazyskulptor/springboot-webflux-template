@@ -1,4 +1,4 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.autoconfigure;
 
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 

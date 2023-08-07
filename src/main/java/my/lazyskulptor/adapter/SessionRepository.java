@@ -1,7 +1,9 @@
 package my.lazyskulptor.adapter;
 
+import org.springframework.data.repository.NoRepositoryBean;
 import reactor.core.publisher.Mono;
 
+@NoRepositoryBean
 public interface SessionRepository {
     SessionDispatcher getSessionDispatcher();
 
