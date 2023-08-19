@@ -32,11 +32,11 @@ dependencies {
 	implementation "org.hibernate.reactive:hibernate-reactive-core:1.1.9.Final"
 	implementation "io.vertx:vertx-mysql-client:4.4.1"
 	runtimeOnly "mysql:mysql-connector-java:8.0.32"
-	implementation "javax.validation:validation-api:2.0.1.Final"
+
 	implementation 'org.apache.commons:commons-dbcp2:2.9.0'
 
 	implementation "org.liquibase:liquibase-core"
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation "javax.validation:validation-api:2.0.1.Final"
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'

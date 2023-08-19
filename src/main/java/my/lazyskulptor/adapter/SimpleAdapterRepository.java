@@ -1,11 +1,14 @@
 package my.lazyskulptor.adapter;
 
+import io.smallrye.mutiny.Uni;
 import my.lazyskulptor.commerce.spec.Spec;
 import org.hibernate.reactive.mutiny.Mutiny;
-import org.slf4j.Logger;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple3;
 import reactor.util.function.Tuples;
@@ -16,16 +19,57 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public abstract class QueryTemplate<T, ID> implements QueryRepository<T, ID> {
+@Repository
+public class SimpleAdapterRepository<T, ID> implements AdapterRepository<T, ID>, SessionRepository {
     private final Mutiny.SessionFactory sessionFactory;
 
     private final SessionDispatcher dispatcher;
 
     private final Class<T> classType;
-    public QueryTemplate(Class<T> classType, SessionDispatcher dispatcher) {
-        this.sessionFactory = dispatcher.getSessionFactory();
-        this.classType = classType;
+
+    public SimpleAdapterRepository(Mutiny.SessionFactory sessionFactory, SessionDispatcher dispatcher, Class<T> classType) {
+        this.sessionFactory = sessionFactory;
         this.dispatcher = dispatcher;
+        this.classType = classType;
+    }
+
+    @Override
+    public <S extends T> Mono<Void> save(S entity) {
+
+        return this.dispatcher.apply(ss -> ss.persist(entity));
+    }
+
+    @Override
+    public <S extends T> Mono<T> saveAndFlush(S entity) {
+        return this.dispatcher.apply(ss -> ss.persist(entity).call(ss::flush)
+                .chain(() -> Uni.createFrom().item(entity)));
+    }
+
+    @Override
+    public <S extends T> Mono<Void> saveAll(Flux<S> entity) {
+        return entity.collectList().flatMap(list -> this.dispatcher
+                .apply(ss -> ss.persistAll(list.toArray())));
+    }
+
+    @Override
+    public <S extends T> Flux<T> saveAllAndFlush(Flux<S> entity) {
+        return entity.collectList().flatMap(list -> this.dispatcher
+                        .apply(ss -> ss.persistAll(list.toArray()).call(ss::flush)
+                                .replaceWith(Uni.createFrom().item(list)))
+                        .map(li -> li))
+                .flatMapMany(Flux::fromIterable);
+    }
+
+    @Override
+    public Mono<Void> deleteById(ID id) {
+        return this.dispatcher.apply(ss -> ss.find(classType, id).flatMap(ss::remove));
+    }
+
+    @Override
+    public Mono<Void> deleteAllById(Flux<ID> id) {
+        return id.collectList().flatMap(list ->
+                this.dispatcher.apply(ss -> ss.find(classType, list.toArray())
+                        .flatMap(ss::removeAll)));
     }
 
     @Override
@@ -110,6 +154,11 @@ public abstract class QueryTemplate<T, ID> implements QueryRepository<T, ID> {
         return Tuples.of(query, predicate, root);
     }
 
+
+    @Override
+    public Flux<T> findAll(Sort sort) {
+        return null;
+    }
 
     @Override
     public SessionDispatcher getSessionDispatcher() {

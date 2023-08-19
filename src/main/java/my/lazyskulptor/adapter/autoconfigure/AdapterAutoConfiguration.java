@@ -4,6 +4,7 @@ import my.lazyskulptor.adapter.DefaultSessionDispatcher;
 import my.lazyskulptor.adapter.HibernateReactiveTransactionManager;
 import my.lazyskulptor.adapter.SessionDispatcher;
 import org.hibernate.reactive.mutiny.Mutiny;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -11,6 +12,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.transaction.TransactionManager;
 
 @Configuration
+@ConditionalOnClass(Mutiny.SessionFactory.class)
 public class AdapterAutoConfiguration {
 
 

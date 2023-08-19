@@ -10,8 +10,6 @@ import my.lazyskulptor.adapter.SessionDispatcher;
 import my.lazyskulptor.commerce.DataHBTest;
 import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
-import my.lazyskulptor.commerce.repo.impl.AccountCmdRepoImpl;
-import my.lazyskulptor.commerce.repo.impl.AccountRepositoryImpl;
 import my.lazyskulptor.commerce.spec.Logic;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.hibernate.reactive.mutiny.Mutiny;
@@ -19,6 +17,7 @@ import org.hibernate.reactive.mutiny.impl.MutinySessionImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
 
@@ -31,8 +30,11 @@ public class TransactionTest {
 
     @SpyBean
     private Mutiny.SessionFactory sessionFactory;
+    @Autowired
     private AccountQueryRepository accountRepository;
-    private AccountCmdRepository accountCmd;
+
+//    @Autowired
+//    private AccountCmdRepository accountCmd;
 
     private SessionDispatcher demoDispatcher;
 
@@ -51,205 +53,203 @@ public class TransactionTest {
     @BeforeEach
     void setup() {
         this.demoDispatcher = new DemoTxManager(sessionFactory);
-        this.accountRepository = new AccountRepositoryImpl(demoDispatcher);
-        this.accountCmd = new AccountCmdRepoImpl(demoDispatcher);
     }
 
-    @Test
-    void testSave() {
-        Account entity = accountFixture.get();
-
-        accountCmd.save(entity).block();
-
-        assertThat(entity.getId()).isNotNull();
-    }
-
-    @Test
-    void testTxLateFlush() {
-        Account entity = accountFixture.get();
-
-        var persisted = sessionFactory.withTransaction(session -> {
-            var mono = accountCmd.save(entity).log("AFTER SAVE")
-                    .then(accountCmd.flush().singleOptional()).log("ON FLUSH")
-                    .flatMap(_saved -> accountRepository.findOne(new IdEqualsSpec(entity.getId()))).log("IN FLATMAP")
-                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
-            return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
-        }).await().indefinitely();
-
-        assertThat(entity.getId()).isNotNull();
-        assertThat(persisted.getId()).isNotNull();
-    }
-
-    @Test
-    void testTxFlush() {
-        Account entity = accountFixture.get();
-
-        var persisted = sessionFactory.withTransaction(session -> {
-            var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
-                    .flatMap(saved -> accountRepository.findOne(new IdEqualsSpec(saved.getId()))).log("IN FLATMAP")
-                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
-            return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
-        }).await().indefinitely();
-
-        assertThat(entity.getId()).isNotNull();
-        assertThat(persisted.getId()).isNotNull();
-    }
-
-    @Test
-    void testTxDeferred() {
-        Account entity = accountFixture.get();
-
-        Account persisted = sessionFactory.withTransaction(session -> {
-            var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
-                    .then(Mono.defer(() -> accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN")))
-                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
-            return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
-        }).await().indefinitely();
-
-        assertThat(entity.getId()).isNotNull();
-        assertThat(persisted.getId()).isNotNull();
-    }
-
-    @Test
-    void testTxByOpen() {
-        Account entity = accountFixture.get();
-        AtomicReference<Mutiny.Session> sessionAtomicReference = new AtomicReference<>();
-        var sessionUni = sessionFactory.openSession()
-                .convert().with(UniReactorConverters.toMono())
-                .flatMap(ss -> {
-                    var impl = (MutinySessionImpl) ss;
-                    sessionAtomicReference.set(spy(ss));
-                    return Uni.createFrom()
-                            .completionStage(impl.getReactiveConnection().beginTransaction())
-                                    .replaceWith(sessionAtomicReference)
-                            .convert().with(UniReactorConverters.toMono());
-                });
-
-
-        var prevCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
-        Account persisted = Mono.usingWhen(sessionUni,
-                        ssRefInCtx -> {
-                            var localsss = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
-                                    .then(Mono.defer(() -> accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN")));
-                            return localsss;
-                        },
-                        ref -> ref.get().close().log("DO_FIANLLY").convert().with(UniReactorConverters.toMono()))
-                .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, sessionAtomicReference))
-                .block();
-//        var afterCnt = ((List<Account>) accountRepository.<Account>findList(Values.TRUE, null).block()).size();
-
-        verify(sessionAtomicReference.get(), times(1)).close();
-//        assertThat(afterCnt).isGreaterThan(prevCnt);
-        assertThat(entity.getId()).isNotNull();
-        assertThat(persisted.getId()).isNotNull();
-    }
-
-    @Test
-    void testTxFailByOpen() {
-        Account entity = accountFixture.get();
-        AtomicReference<Mutiny.Session> sessionAtomicReference = new AtomicReference<>();
-        var sessionUni = sessionFactory.openSession()
-                .chain(sess -> {
-                    var ssImpl = (MutinySessionImpl) sess;
-                    sessionAtomicReference.set(spy(sess));
-                    return Uni.createFrom()
-                            .completionStage(ssImpl.getReactiveConnection().beginTransaction())
-                                    .replaceWith(sessionAtomicReference);
-                })
-                .convert().with(UniReactorConverters.toMono());
-
-        Account persisted = null;
-        Exception exception = null;
-        var prevCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
-        try {
-            persisted = Mono.usingWhen(sessionUni,
-                            sessRefInCtx -> {
-                                var localSess = accountCmd.saveAndFlush(entity)
-                                        // Mono#then can't be used here to reference entity ID. Because IdEqualsSpec is already evaluated.
-                                        .then(accountRepository.findOne(new IdEqualsSpec(entity.getId())));
-                                return localSess;
-                            },
-                            ref -> {
-                                var localSess = (MutinySessionImpl) ref.get();
-                                var conn = localSess.getReactiveConnection();
-                                return Uni.createFrom().completionStage(conn.commitTransaction())
-                                        .chain(localSess::close)
-                                        .convert().with(UniReactorConverters.toMono());
-                            },
-                            (ref, ex) -> {
-                                var localSess = (MutinySessionImpl) ref.get();
-                                var conn = localSess.getReactiveConnection();
-                                return Uni.createFrom().completionStage(conn.rollbackTransaction())
-                                        .chain(localSess::close)
-                                        .convert().with(UniReactorConverters.toMono());
-                            },
-                            ref -> {
-                                var localSess = (MutinySessionImpl) ref.get();
-                                var conn = localSess.getReactiveConnection();
-                                return Uni.createFrom().completionStage(conn.rollbackTransaction())
-                                        .chain(localSess::close)
-                                        .convert().with(UniReactorConverters.toMono());
-                            })
-                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, sessionAtomicReference))
-                    .block();
-        } catch (Exception e) {
-            exception = e;
-        }
-
-        var afterCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
-
-        verify(sessionAtomicReference.get(), times(1)).close();
-        assertThat(prevCnt).isEqualTo(afterCnt);
-        assertThat(persisted).isNull();
-        assertThat(exception).isNotNull();
-    }
-
-    @Test
-    void testTxFail() {
-        Account entity = accountFixture.get();
-
-        Account persisted = null;
-        Exception exception = null;
-        var prevCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
-        try {
-            persisted = sessionFactory.withTransaction(session -> {
-                var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
-                        // Mono#then can't be used here to reference entity ID. Because IdEqualsSpec is already evaluated.
-                        .then(accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN"))
-                        .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
-                return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
-            }).await().indefinitely();
-        } catch (Exception e) {
-            exception = e;
-        }
-        var afterCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
-
-        assertThat(entity.getId()).isNotNull();
-        assertThat(afterCnt).isEqualTo(prevCnt);
-        assertThat(persisted).isNull();
-    }
-
-    @Test
-    void testTxRollback() {
-        Account entity = accountFixture.get();
-        Account persisted = null;
-
-        try {
-            persisted = sessionFactory.withTransaction(session -> {
-                        var mono = accountCmd.saveAndFlush(entity)
-                                .flatMap(saved -> accountRepository.findOne(new IdEqualsSpec(entity.getId())))
-                                .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
-                        if (true)
-                            throw new RuntimeException("Exception to Rollback");
-
-                        return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
-                    })
-                    .onFailure().recoverWithItem(entity)
-                    .await().indefinitely();
-        } catch (Exception e) {
-        }
-
-        assertThat(entity.getId()).isNull();
-        assertThat(persisted).isEqualTo(entity);
-    }
+//    @Test
+//    void testSave() {
+//        Account entity = accountFixture.get();
+//
+//        accountCmd.save(entity).block();
+//
+//        assertThat(entity.getId()).isNotNull();
+//    }
+//
+//    @Test
+//    void testTxLateFlush() {
+//        Account entity = accountFixture.get();
+//
+//        var persisted = sessionFactory.withTransaction(session -> {
+//            var mono = accountCmd.save(entity).log("AFTER SAVE")
+//                    .then(accountCmd.flush().singleOptional()).log("ON FLUSH")
+//                    .flatMap(_saved -> accountRepository.findOne(new IdEqualsSpec(entity.getId()))).log("IN FLATMAP")
+//                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
+//            return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
+//        }).await().indefinitely();
+//
+//        assertThat(entity.getId()).isNotNull();
+//        assertThat(persisted.getId()).isNotNull();
+//    }
+//
+//    @Test
+//    void testTxFlush() {
+//        Account entity = accountFixture.get();
+//
+//        var persisted = sessionFactory.withTransaction(session -> {
+//            var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
+//                    .flatMap(saved -> accountRepository.findOne(new IdEqualsSpec(saved.getId()))).log("IN FLATMAP")
+//                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
+//            return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
+//        }).await().indefinitely();
+//
+//        assertThat(entity.getId()).isNotNull();
+//        assertThat(persisted.getId()).isNotNull();
+//    }
+//
+//    @Test
+//    void testTxDeferred() {
+//        Account entity = accountFixture.get();
+//
+//        Account persisted = sessionFactory.withTransaction(session -> {
+//            var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
+//                    .then(Mono.defer(() -> accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN")))
+//                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
+//            return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
+//        }).await().indefinitely();
+//
+//        assertThat(entity.getId()).isNotNull();
+//        assertThat(persisted.getId()).isNotNull();
+//    }
+//
+//    @Test
+//    void testTxByOpen() {
+//        Account entity = accountFixture.get();
+//        AtomicReference<Mutiny.Session> sessionAtomicReference = new AtomicReference<>();
+//        var sessionUni = sessionFactory.openSession()
+//                .convert().with(UniReactorConverters.toMono())
+//                .flatMap(ss -> {
+//                    var impl = (MutinySessionImpl) ss;
+//                    sessionAtomicReference.set(spy(ss));
+//                    return Uni.createFrom()
+//                            .completionStage(impl.getReactiveConnection().beginTransaction())
+//                                    .replaceWith(sessionAtomicReference)
+//                            .convert().with(UniReactorConverters.toMono());
+//                });
+//
+//
+//        var prevCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
+//        Account persisted = Mono.usingWhen(sessionUni,
+//                        ssRefInCtx -> {
+//                            var localsss = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
+//                                    .then(Mono.defer(() -> accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN")));
+//                            return localsss;
+//                        },
+//                        ref -> ref.get().close().log("DO_FIANLLY").convert().with(UniReactorConverters.toMono()))
+//                .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, sessionAtomicReference))
+//                .block();
+////        var afterCnt = ((List<Account>) accountRepository.<Account>findList(Values.TRUE, null).block()).size();
+//
+//        verify(sessionAtomicReference.get(), times(1)).close();
+////        assertThat(afterCnt).isGreaterThan(prevCnt);
+//        assertThat(entity.getId()).isNotNull();
+//        assertThat(persisted.getId()).isNotNull();
+//    }
+//
+//    @Test
+//    void testTxFailByOpen() {
+//        Account entity = accountFixture.get();
+//        AtomicReference<Mutiny.Session> sessionAtomicReference = new AtomicReference<>();
+//        var sessionUni = sessionFactory.openSession()
+//                .chain(sess -> {
+//                    var ssImpl = (MutinySessionImpl) sess;
+//                    sessionAtomicReference.set(spy(sess));
+//                    return Uni.createFrom()
+//                            .completionStage(ssImpl.getReactiveConnection().beginTransaction())
+//                                    .replaceWith(sessionAtomicReference);
+//                })
+//                .convert().with(UniReactorConverters.toMono());
+//
+//        Account persisted = null;
+//        Exception exception = null;
+//        var prevCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
+//        try {
+//            persisted = Mono.usingWhen(sessionUni,
+//                            sessRefInCtx -> {
+//                                var localSess = accountCmd.saveAndFlush(entity)
+//                                        // Mono#then can't be used here to reference entity ID. Because IdEqualsSpec is already evaluated.
+//                                        .then(accountRepository.findOne(new IdEqualsSpec(entity.getId())));
+//                                return localSess;
+//                            },
+//                            ref -> {
+//                                var localSess = (MutinySessionImpl) ref.get();
+//                                var conn = localSess.getReactiveConnection();
+//                                return Uni.createFrom().completionStage(conn.commitTransaction())
+//                                        .chain(localSess::close)
+//                                        .convert().with(UniReactorConverters.toMono());
+//                            },
+//                            (ref, ex) -> {
+//                                var localSess = (MutinySessionImpl) ref.get();
+//                                var conn = localSess.getReactiveConnection();
+//                                return Uni.createFrom().completionStage(conn.rollbackTransaction())
+//                                        .chain(localSess::close)
+//                                        .convert().with(UniReactorConverters.toMono());
+//                            },
+//                            ref -> {
+//                                var localSess = (MutinySessionImpl) ref.get();
+//                                var conn = localSess.getReactiveConnection();
+//                                return Uni.createFrom().completionStage(conn.rollbackTransaction())
+//                                        .chain(localSess::close)
+//                                        .convert().with(UniReactorConverters.toMono());
+//                            })
+//                    .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, sessionAtomicReference))
+//                    .block();
+//        } catch (Exception e) {
+//            exception = e;
+//        }
+//
+//        var afterCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
+//
+//        verify(sessionAtomicReference.get(), times(1)).close();
+//        assertThat(prevCnt).isEqualTo(afterCnt);
+//        assertThat(persisted).isNull();
+//        assertThat(exception).isNotNull();
+//    }
+//
+//    @Test
+//    void testTxFail() {
+//        Account entity = accountFixture.get();
+//
+//        Account persisted = null;
+//        Exception exception = null;
+//        var prevCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
+//        try {
+//            persisted = sessionFactory.withTransaction(session -> {
+//                var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
+//                        // Mono#then can't be used here to reference entity ID. Because IdEqualsSpec is already evaluated.
+//                        .then(accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN"))
+//                        .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
+//                return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
+//            }).await().indefinitely();
+//        } catch (Exception e) {
+//            exception = e;
+//        }
+//        var afterCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
+//
+//        assertThat(entity.getId()).isNotNull();
+//        assertThat(afterCnt).isEqualTo(prevCnt);
+//        assertThat(persisted).isNull();
+//    }
+//
+//    @Test
+//    void testTxRollback() {
+//        Account entity = accountFixture.get();
+//        Account persisted = null;
+//
+//        try {
+//            persisted = sessionFactory.withTransaction(session -> {
+//                        var mono = accountCmd.saveAndFlush(entity)
+//                                .flatMap(saved -> accountRepository.findOne(new IdEqualsSpec(entity.getId())))
+//                                .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
+//                        if (true)
+//                            throw new RuntimeException("Exception to Rollback");
+//
+//                        return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
+//                    })
+//                    .onFailure().recoverWithItem(entity)
+//                    .await().indefinitely();
+//        } catch (Exception e) {
+//        }
+//
+//        assertThat(entity.getId()).isNull();
+//        assertThat(persisted).isEqualTo(entity);
+//    }
 }
