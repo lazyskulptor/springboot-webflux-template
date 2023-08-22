@@ -1,16 +1,16 @@
 package my.lazyskulptor.adapter.repository;
 
-import my.lazyskulptor.adapter.annotation.EnableAdapterRepositories;
-import my.lazyskulptor.adapter.config.ConfigurationExtensionSupport;
+import my.lazyskulptor.adapter.annotation.EnableHrsaRepositories;
+import my.lazyskulptor.adapter.support.ConfigurationExtensionSupport;
 import org.springframework.data.repository.config.RepositoryBeanDefinitionRegistrarSupport;
 import org.springframework.data.repository.config.RepositoryConfigurationExtension;
 
 import java.lang.annotation.Annotation;
 
-public class RepositoriesRegistrar extends RepositoryBeanDefinitionRegistrarSupport {
+public class HrsaRepositoriesRegistrar extends RepositoryBeanDefinitionRegistrarSupport {
     @Override
     protected Class<? extends Annotation> getAnnotation() {
-        return EnableAdapterRepositories.class;
+        return EnableHrsaRepositories.class;
     }
 
     @Override

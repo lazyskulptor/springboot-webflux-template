@@ -1,6 +1,7 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.repository;
 
 import io.smallrye.mutiny.Uni;
+import my.lazyskulptor.adapter.support.SessionDispatcher;
 import my.lazyskulptor.commerce.spec.Spec;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.data.domain.Page;
@@ -20,14 +21,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Repository
-public class SimpleAdapterRepository<T, ID> implements AdapterRepository<T, ID> {
+public class SimpleHrsaRepository<T, ID> implements HrsaRepository<T, ID> {
     private final Mutiny.SessionFactory sessionFactory;
 
     private final SessionDispatcher dispatcher;
 
     private final Class<T> classType;
 
-    public SimpleAdapterRepository(Mutiny.SessionFactory sessionFactory, SessionDispatcher dispatcher, Class<T> classType) {
+    public SimpleHrsaRepository(Mutiny.SessionFactory sessionFactory, SessionDispatcher dispatcher, Class<T> classType) {
         this.sessionFactory = sessionFactory;
         this.dispatcher = dispatcher;
         this.classType = classType;

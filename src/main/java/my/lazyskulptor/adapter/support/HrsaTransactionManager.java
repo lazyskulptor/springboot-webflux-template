@@ -1,4 +1,4 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.support;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
@@ -20,11 +20,11 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.function.Function;
 
-public class HibernateReactiveTransactionManager extends AbstractReactiveTransactionManager implements InitializingBean, SessionDispatcher {
+public class HrsaTransactionManager extends AbstractReactiveTransactionManager implements InitializingBean, SessionDispatcher {
     @NonNull
     private Mutiny.SessionFactory sessionFactory;
 
-    public HibernateReactiveTransactionManager(@NonNull Mutiny.SessionFactory sessionFactory) {
+    public HrsaTransactionManager(@NonNull Mutiny.SessionFactory sessionFactory) {
         setSessionFactory(sessionFactory);
         afterPropertiesSet();
     }
@@ -39,8 +39,8 @@ public class HibernateReactiveTransactionManager extends AbstractReactiveTransac
     @Override
     public <R> Mono<R> apply(Function<Mutiny.Session, Uni<R>> work) {
         return TransactionSynchronizationManager.forCurrentTransaction()
-                .map(syncManager -> (SessionHolder)syncManager.getResource(sessionFactory))
-                .map(SessionHolder::getSession)
+                .map(syncManager -> (HrsaSessionHolder)syncManager.getResource(sessionFactory))
+                .map(HrsaSessionHolder::getSession)
                 .map(work)
                 .switchIfEmpty(Mono.just(obtainSessionFactory()
                         .withSession(session -> work.apply(session).call(session::flush)
@@ -51,7 +51,7 @@ public class HibernateReactiveTransactionManager extends AbstractReactiveTransac
     @Override
     protected Object doGetTransaction(TransactionSynchronizationManager synchronizationManager) throws TransactionException {
         SessionFactoryTransactionObject txObject = new SessionFactoryTransactionObject();
-        SessionHolder holder = (SessionHolder) synchronizationManager.getResource(obtainSessionFactory());
+        HrsaSessionHolder holder = (HrsaSessionHolder) synchronizationManager.getResource(obtainSessionFactory());
         txObject.setSessionHolder(holder, false);
         return txObject;
     }
@@ -74,7 +74,7 @@ public class HibernateReactiveTransactionManager extends AbstractReactiveTransac
                     if (logger.isDebugEnabled()) {
                         logger.debug("Acquired Session [" + newConn + "] for Hibernate Reactive transaction");
                     }
-                    txObject.setSessionHolder(new SessionHolder(sess), true);
+                    txObject.setSessionHolder(new HrsaSessionHolder(sess), true);
                 });
             } else {
                 txObject.getSessionHolder().setSynchronizedWithTransaction(true);
@@ -175,14 +175,14 @@ public class HibernateReactiveTransactionManager extends AbstractReactiveTransac
     private static class SessionFactoryTransactionObject {
 
         @Nullable
-        private SessionHolder sessionHolder;
+        private HrsaSessionHolder sessionHolder;
 
         @Nullable
         private int previousIsolationLevel;
 
         private boolean newSessionHolder;
 
-        void setSessionHolder(@Nullable SessionHolder sessionHolder, boolean newSessionHolder) {
+        void setSessionHolder(@Nullable HrsaSessionHolder sessionHolder, boolean newSessionHolder) {
             setSessionHolder(sessionHolder);
             this.newSessionHolder = newSessionHolder;
         }
@@ -195,11 +195,11 @@ public class HibernateReactiveTransactionManager extends AbstractReactiveTransac
             getSessionHolder().setRollbackOnly();
         }
 
-        public void setSessionHolder(@Nullable SessionHolder sessionHolder) {
+        public void setSessionHolder(@Nullable HrsaSessionHolder sessionHolder) {
             this.sessionHolder = sessionHolder;
         }
 
-        public SessionHolder getSessionHolder() {
+        public HrsaSessionHolder getSessionHolder() {
             Assert.state(this.sessionHolder != null, "No SessionHolder available");
             return this.sessionHolder;
         }

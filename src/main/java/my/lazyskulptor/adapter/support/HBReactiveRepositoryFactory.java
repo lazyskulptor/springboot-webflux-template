@@ -1,5 +1,6 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.support;
 
+import my.lazyskulptor.adapter.repository.SimpleHrsaRepository;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.RepositoryInformation;
@@ -10,7 +11,7 @@ import org.springframework.util.Assert;
 import javax.persistence.metamodel.Metamodel;
 
 
-public class HBReactiveRepositoryFactory extends ReactiveRepositoryFactorySupport {
+class HBReactiveRepositoryFactory extends ReactiveRepositoryFactorySupport {
 
     private final Mutiny.SessionFactory sessionFactory;
 
@@ -26,7 +27,7 @@ public class HBReactiveRepositoryFactory extends ReactiveRepositoryFactorySuppor
         Assert.notNull(domainClass, "Domain class must not be null!");
         Assert.notNull(sessionFactory, "Mutiny.SessionFactory must not be null!");
         Metamodel metamodel = sessionFactory.getMetamodel();
-        return new AdapterEntityInformation<>(domainClass, metamodel);
+        return new HrsaEntityInformation<>(domainClass, metamodel);
     }
 
     @Override
@@ -37,6 +38,6 @@ public class HBReactiveRepositoryFactory extends ReactiveRepositoryFactorySuppor
 
     @Override
     protected Class<?> getRepositoryBaseClass(RepositoryMetadata metadata) {
-        return SimpleAdapterRepository.class;
+        return SimpleHrsaRepository.class;
     }
 }

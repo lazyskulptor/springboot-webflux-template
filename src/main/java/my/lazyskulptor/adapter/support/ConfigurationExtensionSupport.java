@@ -1,7 +1,6 @@
-package my.lazyskulptor.adapter.config;
+package my.lazyskulptor.adapter.support;
 
-import my.lazyskulptor.adapter.AdapterRepository;
-import my.lazyskulptor.adapter.support.RepositoryFactoryBean;
+import my.lazyskulptor.adapter.repository.HrsaRepository;
 import org.springframework.data.repository.config.RepositoryConfigurationExtensionSupport;
 import org.springframework.data.repository.core.RepositoryMetadata;
 
@@ -21,7 +20,7 @@ public class ConfigurationExtensionSupport extends RepositoryConfigurationExtens
 
     @Override
     public String getRepositoryFactoryBeanClassName() {
-        return RepositoryFactoryBean.class.getName();
+        return HrsaRepositoryFactoryBean.class.getName();
     }
 
     @Override
@@ -36,7 +35,7 @@ public class ConfigurationExtensionSupport extends RepositoryConfigurationExtens
 
     @Override
     protected Collection<Class<?>> getIdentifyingTypes() {
-        return Collections.<Class<?>> singleton(AdapterRepository.class);
+        return Collections.<Class<?>> singleton(HrsaRepository.class);
     }
 
 

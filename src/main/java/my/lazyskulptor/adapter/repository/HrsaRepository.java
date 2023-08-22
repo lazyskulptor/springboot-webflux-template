@@ -1,4 +1,4 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.repository;
 
 import my.lazyskulptor.commerce.spec.Spec;
 import org.springframework.data.domain.Page;
@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @NoRepositoryBean
-public interface AdapterRepository<T, ID> extends ReactiveSortingRepository<T, ID>, Repository<T, ID>, SessionRepository {
+public interface HrsaRepository<T, ID> extends ReactiveSortingRepository<T, ID>, Repository<T, ID>, HibernateReactiveSessionRepository {
 
     <S extends T> Mono<Void> save(S entity);
 

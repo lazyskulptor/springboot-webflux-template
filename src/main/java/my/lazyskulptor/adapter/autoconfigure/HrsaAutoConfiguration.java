@@ -1,8 +1,8 @@
 package my.lazyskulptor.adapter.autoconfigure;
 
-import my.lazyskulptor.adapter.DefaultSessionDispatcher;
-import my.lazyskulptor.adapter.HibernateReactiveTransactionManager;
-import my.lazyskulptor.adapter.SessionDispatcher;
+import my.lazyskulptor.adapter.support.DefaultSessionDispatcher;
+import my.lazyskulptor.adapter.support.HrsaTransactionManager;
+import my.lazyskulptor.adapter.support.SessionDispatcher;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
@@ -13,27 +13,27 @@ import org.springframework.transaction.TransactionManager;
 
 @Configuration
 @ConditionalOnClass(Mutiny.SessionFactory.class)
-public class AdapterAutoConfiguration {
+public class HrsaAutoConfiguration {
 
 
-    private HibernateReactiveTransactionManager manager;
+    private HrsaTransactionManager manager;
     @Bean
-    public HibernateReactiveTransactionManager transactionManager(@NonNull Mutiny.SessionFactory sessionFactory) {
+    public HrsaTransactionManager transactionManager(@NonNull Mutiny.SessionFactory sessionFactory) {
         return getManager(sessionFactory);
     }
 
     @Bean
     @Primary
     public SessionDispatcher sessionDispatcher(@NonNull Mutiny.SessionFactory sessionFactory, TransactionManager transactionManager) {
-        if (!(transactionManager instanceof HibernateReactiveTransactionManager)) {
+        if (!(transactionManager instanceof HrsaTransactionManager)) {
             return new DefaultSessionDispatcher(sessionFactory);
         }
         return getManager(sessionFactory);
     }
 
-    private synchronized HibernateReactiveTransactionManager getManager(Mutiny.SessionFactory sessionFactory) {
+    private synchronized HrsaTransactionManager getManager(Mutiny.SessionFactory sessionFactory) {
         if (manager == null) {
-            manager = new HibernateReactiveTransactionManager(sessionFactory);
+            manager = new HrsaTransactionManager(sessionFactory);
         }
         return manager;
     }

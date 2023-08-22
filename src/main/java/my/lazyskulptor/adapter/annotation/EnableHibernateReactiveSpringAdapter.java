@@ -1,5 +1,6 @@
-package my.lazyskulptor.adapter.autoconfigure;
+package my.lazyskulptor.adapter.annotation;
 
+import my.lazyskulptor.adapter.autoconfigure.HrsaAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 
 import java.lang.annotation.Documented;
@@ -11,6 +12,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@ImportAutoConfiguration(value = AdapterAutoConfiguration.class)
+@ImportAutoConfiguration(value = HrsaAutoConfiguration.class)
 public @interface EnableHibernateReactiveSpringAdapter {
 }

@@ -1,20 +1,20 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.support;
 
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.support.ResourceHolderSupport;
 
-public class SessionHolder extends ResourceHolderSupport {
+class HrsaSessionHolder extends ResourceHolderSupport {
     @Nullable
     private Mutiny.Session session;
 
     private boolean isTransactionActive;
 
-    public SessionHolder(@Nullable Mutiny.Session session) {
+    public HrsaSessionHolder(@Nullable Mutiny.Session session) {
         this(session, false);
     }
 
-    public SessionHolder(@Nullable Mutiny.Session session, boolean isTransactionActive) {
+    public HrsaSessionHolder(@Nullable Mutiny.Session session, boolean isTransactionActive) {
         this.session = session;
         this.isTransactionActive = isTransactionActive;
     }

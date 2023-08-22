@@ -4,10 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
-import my.lazyskulptor.adapter.AdapterRepository;
+import my.lazyskulptor.adapter.repository.HrsaRepository;
 import my.lazyskulptor.adapter.DemoTxManager;
-import my.lazyskulptor.adapter.SessionDispatcher;
-import my.lazyskulptor.adapter.SimpleAdapterRepository;
+import my.lazyskulptor.adapter.repository.SimpleHrsaRepository;
 import my.lazyskulptor.commerce.ContainerExtension;
 import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
@@ -17,7 +16,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.data.domain.Pageable;
@@ -33,11 +31,11 @@ public class CriteriaTest {
     @SpyBean
     private Mutiny.SessionFactory sessionFactory;
 
-    private AdapterRepository<Account, Long> accountRepository;
+    private HrsaRepository<Account, Long> accountRepository;
 
     @BeforeEach
     void setup() {
-        this.accountRepository = new SimpleAdapterRepository<>(sessionFactory, new DemoTxManager(sessionFactory), Account.class);
+        this.accountRepository = new SimpleHrsaRepository<>(sessionFactory, new DemoTxManager(sessionFactory), Account.class);
     }
 
     private final Spec<Account> idEquals = new IdEqualsSpec(1L);

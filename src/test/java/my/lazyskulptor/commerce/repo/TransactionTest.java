@@ -6,8 +6,7 @@ import static org.mockito.Mockito.*;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
 import my.lazyskulptor.adapter.DemoTxManager;
-import my.lazyskulptor.adapter.SimpleAdapterRepository;
-import my.lazyskulptor.commerce.DataHBTest;
+import my.lazyskulptor.adapter.repository.SimpleHrsaRepository;
 import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
 import my.lazyskulptor.commerce.spec.Logic;
@@ -31,7 +30,7 @@ public class TransactionTest {
     @SpyBean
     private Mutiny.SessionFactory sessionFactory;
 
-    private SimpleAdapterRepository<Account, Long> accountRepository;
+    private SimpleHrsaRepository<Account, Long> accountRepository;
 
     private Supplier<Account> accountFixture = () -> {
         String email = RandomStringUtils.randomAlphanumeric(10) +
@@ -47,7 +46,7 @@ public class TransactionTest {
 
     @BeforeEach
     void setup() {
-        this.accountRepository = new SimpleAdapterRepository<>(sessionFactory, new DemoTxManager(sessionFactory), Account.class);
+        this.accountRepository = new SimpleHrsaRepository<>(sessionFactory, new DemoTxManager(sessionFactory), Account.class);
 //        this.demoDispatcher = new DemoTxManager(sessionFactory);
     }
 

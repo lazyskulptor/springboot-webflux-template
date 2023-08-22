@@ -2,6 +2,7 @@ package my.lazyskulptor.adapter;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
+import my.lazyskulptor.adapter.support.DefaultSessionDispatcher;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.lang.NonNull;
 import reactor.core.publisher.Mono;

@@ -1,13 +1,13 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.support;
 
 import org.springframework.data.repository.core.support.AbstractEntityInformation;
 
 import javax.persistence.metamodel.Metamodel;
 
-public class AdapterEntityInformation<T, ID> extends AbstractEntityInformation<T, ID> {
+class HrsaEntityInformation<T, ID> extends AbstractEntityInformation<T, ID> {
     final private Metamodel metamodel;
 
-    public AdapterEntityInformation(Class<T> domainClass, Metamodel metamodel) {
+    public HrsaEntityInformation(Class<T> domainClass, Metamodel metamodel) {
         super(domainClass);
         this.metamodel = metamodel;
     }

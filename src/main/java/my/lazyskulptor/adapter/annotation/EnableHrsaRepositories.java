@@ -1,7 +1,7 @@
 package my.lazyskulptor.adapter.annotation;
 
-import my.lazyskulptor.adapter.repository.RepositoriesRegistrar;
-import my.lazyskulptor.adapter.support.RepositoryFactoryBean;
+import my.lazyskulptor.adapter.repository.HrsaRepositoriesRegistrar;
+import my.lazyskulptor.adapter.support.HrsaRepositoryFactoryBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.repository.config.DefaultRepositoryBaseClass;
@@ -13,8 +13,8 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Inherited
-@Import(RepositoriesRegistrar.class)
-public @interface EnableAdapterRepositories {
+@Import(HrsaRepositoriesRegistrar.class)
+public @interface EnableHrsaRepositories {
 
     String[] value() default {};
 
@@ -32,7 +32,7 @@ public @interface EnableAdapterRepositories {
 
     QueryLookupStrategy.Key queryLookupStrategy() default QueryLookupStrategy.Key.CREATE_IF_NOT_FOUND;
 
-    Class<?> repositoryFactoryBeanClass() default RepositoryFactoryBean.class;
+    Class<?> repositoryFactoryBeanClass() default HrsaRepositoryFactoryBean.class;
 
     /**
      * Configure the repository base class to be used to create repository proxies for this particular configuration.

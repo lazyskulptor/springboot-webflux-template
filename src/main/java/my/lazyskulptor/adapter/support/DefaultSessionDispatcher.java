@@ -1,4 +1,4 @@
-package my.lazyskulptor.adapter;
+package my.lazyskulptor.adapter.support;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
