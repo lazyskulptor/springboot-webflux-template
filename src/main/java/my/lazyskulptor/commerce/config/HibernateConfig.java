@@ -27,7 +27,7 @@ public class HibernateConfig {
 
 
     @Bean
-    public EntityManagerFactory entityManagerFactory(DataSource _ds) {
+    public EntityManagerFactory entityManagerFactory() {
         return Persistence.createEntityManagerFactory("mysql-example",
                 Map.of("jakarta.persistence.jdbc.driver", Objects.requireNonNull(environment.getProperty("spring.datasource.driver-class-name")),
                         "jakarta.persistence.jdbc.url", Objects.requireNonNull(environment.getProperty("spring.datasource.url")),

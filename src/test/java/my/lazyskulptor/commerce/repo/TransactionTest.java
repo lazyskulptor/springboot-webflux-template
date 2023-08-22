@@ -32,7 +32,7 @@ public class TransactionTest {
 
     private SimpleHrsaRepository<Account, Long> accountRepository;
 
-    private Supplier<Account> accountFixture = () -> {
+    private final Supplier<Account> accountFixture = () -> {
         String email = RandomStringUtils.randomAlphanumeric(10) +
                 "@" +
                 RandomStringUtils.randomAlphanumeric(10);

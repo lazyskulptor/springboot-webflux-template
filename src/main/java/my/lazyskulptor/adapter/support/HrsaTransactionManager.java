@@ -21,7 +21,7 @@ import java.time.Duration;
 import java.util.function.Function;
 
 public class HrsaTransactionManager extends AbstractReactiveTransactionManager implements InitializingBean, SessionDispatcher {
-    @NonNull
+
     private Mutiny.SessionFactory sessionFactory;
 
     public HrsaTransactionManager(@NonNull Mutiny.SessionFactory sessionFactory) {
@@ -44,7 +44,7 @@ public class HrsaTransactionManager extends AbstractReactiveTransactionManager i
                 .map(work)
                 .switchIfEmpty(Mono.just(obtainSessionFactory()
                         .withSession(session -> work.apply(session).call(session::flush)
-                                .log(new StringBuilder("LOCAL SESSION[").append(session.hashCode()).append("]").toString()))))
+                                .log("LOCAL SESSION[" + session.hashCode() + "]"))))
                 .flatMap(uni -> uni.convert().with(UniReactorConverters.toMono()));
     }
 
