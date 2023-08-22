@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @NoRepositoryBean
-public interface AdapterRepository<T, ID> extends ReactiveSortingRepository<T, ID>, Repository<T, ID> {
+public interface AdapterRepository<T, ID> extends ReactiveSortingRepository<T, ID>, Repository<T, ID>, SessionRepository {
 
     <S extends T> Mono<Void> save(S entity);
 

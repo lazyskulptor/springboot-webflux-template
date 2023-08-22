@@ -20,7 +20,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Repository
-public class SimpleAdapterRepository<T, ID> implements AdapterRepository<T, ID>, SessionRepository {
+public class SimpleAdapterRepository<T, ID> implements AdapterRepository<T, ID> {
     private final Mutiny.SessionFactory sessionFactory;
 
     private final SessionDispatcher dispatcher;
@@ -157,6 +157,7 @@ public class SimpleAdapterRepository<T, ID> implements AdapterRepository<T, ID>,
 
     @Override
     public Flux<T> findAll(Sort sort) {
+        // FIXME:
         return null;
     }
 
