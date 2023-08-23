@@ -1,11 +1,14 @@
 package my.lazyskulptor.adapter.repository;
 
 import io.smallrye.mutiny.Uni;
+import jakarta.annotation.Nonnull;
 import my.lazyskulptor.adapter.support.SessionDispatcher;
+import my.lazyskulptor.commerce.spec.Logic;
 import my.lazyskulptor.commerce.spec.Spec;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
@@ -14,7 +17,11 @@ import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple3;
 import reactor.util.function.Tuples;
 
-import javax.persistence.criteria.*;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Expression;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -36,7 +43,6 @@ public class SimpleHrsaRepository<T, ID> implements HrsaRepository<T, ID> {
 
     @Override
     public <S extends T> Mono<Void> save(S entity) {
-
         return this.dispatcher.apply(ss -> ss.persist(entity));
     }
 
@@ -94,11 +100,20 @@ public class SimpleHrsaRepository<T, ID> implements HrsaRepository<T, ID> {
                 .getResultList());
     }
     @Override
+
     public Mono<Page<T>> findPage(Spec<?> spec, Pageable page) {
         final Pageable p = ensurePage(page);
         return Mono.zip(this.findList(spec, page), this.count(spec))
                 .map(t -> new PageImpl<>(t.getT1(), p, t.getT2()));
     }
+
+    @Override
+    @Nonnull
+    public Flux<T> findAll(@Nonnull Sort sort) {
+        return this.findList(Logic.TRUE, PageRequest.of(0, Integer.MAX_VALUE, sort))
+                .flatMapIterable(Function.identity());
+    }
+
     @Override
     public Mono<Boolean> exists(Spec<?> spec) {
         return this.count(spec).map(cnt -> cnt > 0);
@@ -153,13 +168,6 @@ public class SimpleHrsaRepository<T, ID> implements HrsaRepository<T, ID> {
 
         Predicate predicate = spec.toPredicate(root, query, builder);
         return Tuples.of(query, predicate, root);
-    }
-
-
-    @Override
-    public Flux<T> findAll(Sort sort) {
-        // FIXME:
-        return null;
     }
 
     @Override
