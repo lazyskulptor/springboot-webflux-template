@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
-import my.lazyskulptor.adapter.repository.HrsaRepository;
+import me.lazyskulptor.hrsa.domain.spec.Spec;
+import me.lazyskulptor.hrsa.repository.HrsaRepository;
+import me.lazyskulptor.hrsa.repository.SimpleHrsaRepository;
 import my.lazyskulptor.adapter.DemoTxManager;
-import my.lazyskulptor.adapter.repository.SimpleHrsaRepository;
 import my.lazyskulptor.commerce.ContainerExtension;
 import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
-import my.lazyskulptor.commerce.spec.Spec;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

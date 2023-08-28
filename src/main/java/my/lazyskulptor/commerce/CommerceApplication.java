@@ -1,6 +1,6 @@
 package my.lazyskulptor.commerce;
 
-import my.lazyskulptor.adapter.annotation.EnableHrsaRepositories;
+import me.lazyskulptor.hrsa.annotation.EnableHrsaRepositories;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

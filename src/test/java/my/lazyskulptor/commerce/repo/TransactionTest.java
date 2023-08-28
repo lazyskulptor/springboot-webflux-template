@@ -5,8 +5,8 @@ import static org.mockito.Mockito.*;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
+import me.lazyskulptor.hrsa.repository.SimpleHrsaRepository;
 import my.lazyskulptor.adapter.DemoTxManager;
-import my.lazyskulptor.adapter.repository.SimpleHrsaRepository;
 import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
 import my.lazyskulptor.commerce.spec.Logic;

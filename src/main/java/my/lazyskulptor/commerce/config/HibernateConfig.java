@@ -1,6 +1,6 @@
 package my.lazyskulptor.commerce.config;
 
-import my.lazyskulptor.adapter.annotation.EnableHibernateReactiveSpringAdapter;
+import me.lazyskulptor.hrsa.annotation.EnableHibernateReactiveSpringAdapter;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
