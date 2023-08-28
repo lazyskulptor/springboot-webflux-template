@@ -1,12 +1,11 @@
 package my.lazyskulptor.commerce;
 
+import me.lazyskulptor.hrsa.annotation.EnableHrsaRepositories;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties({ LiquibaseProperties.class })
+@EnableHrsaRepositories(basePackages = "my.lazyskulptor.commerce.repo")
 public class CommerceApplication {
 
 	public static void main(String[] args) {

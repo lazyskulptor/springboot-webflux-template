@@ -11,6 +11,7 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.transaction.ReactiveTransactionManager;
 import reactor.core.publisher.Mono;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -29,12 +30,14 @@ public class TxManagerTest {
 
     @Test
     void verifyCommitIsCalled() {
-        when(queryRepository.count(any())).thenReturn(Mono.just(1L));
+        final var value = 1L;
+        when(queryRepository.count(any())).thenReturn(Mono.just(value));
         var result = service.count().block();
-        System.out.println(result);
 
         verify(transactionManager, times(1)).commit(any());
         verify(transactionManager, times(0)).rollback(any());
+
+        assertThat(result).isEqualTo(value);
     }
 
     @Test

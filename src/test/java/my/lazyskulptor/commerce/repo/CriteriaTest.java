@@ -4,12 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
+import me.lazyskulptor.hrsa.domain.spec.Spec;
+import me.lazyskulptor.hrsa.repository.HrsaRepository;
+import me.lazyskulptor.hrsa.repository.SimpleHrsaRepository;
 import my.lazyskulptor.adapter.DemoTxManager;
 import my.lazyskulptor.commerce.ContainerExtension;
 import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
-import my.lazyskulptor.commerce.repo.impl.AccountRepositoryImpl;
-import my.lazyskulptor.commerce.spec.Spec;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,11 +30,12 @@ public class CriteriaTest {
 
     @SpyBean
     private Mutiny.SessionFactory sessionFactory;
-    private AccountQueryRepository accountRepository;
+
+    private HrsaRepository<Account, Long> accountRepository;
 
     @BeforeEach
     void setup() {
-        this.accountRepository = new AccountRepositoryImpl(new DemoTxManager(sessionFactory));
+        this.accountRepository = new SimpleHrsaRepository<>(sessionFactory, new DemoTxManager(sessionFactory), Account.class);
     }
 
     private final Spec<Account> idEquals = new IdEqualsSpec(1L);

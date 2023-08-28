@@ -22,7 +22,7 @@ import java.lang.annotation.*;
 @Documented
 @Inherited
 @BootstrapWith(DataHBTestContextBootstrapper.class)
-@ExtendWith({SpringExtension.class, ContainerExtension.class})
+@ExtendWith({SpringExtension.class})
 @OverrideAutoConfiguration(enabled = false)
 @TypeExcludeFilters(DataHBTypeExcludeFilter.class)
 @ImportAutoConfiguration

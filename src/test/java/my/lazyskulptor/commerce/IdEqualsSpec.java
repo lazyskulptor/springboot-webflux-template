@@ -1,7 +1,7 @@
 package my.lazyskulptor.commerce;
 
+import me.lazyskulptor.hrsa.domain.spec.Spec;
 import my.lazyskulptor.commerce.model.Account;
-import my.lazyskulptor.commerce.spec.Spec;
 
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;

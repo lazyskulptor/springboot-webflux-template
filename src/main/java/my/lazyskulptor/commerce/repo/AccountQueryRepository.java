@@ -1,7 +1,7 @@
 package my.lazyskulptor.commerce.repo;
 
-import my.lazyskulptor.adapter.QueryRepository;
+import me.lazyskulptor.hrsa.repository.HrsaRepository;
 import my.lazyskulptor.commerce.model.Account;
 
-public interface AccountQueryRepository extends QueryRepository<Account, Long> {
+public interface AccountQueryRepository extends HrsaRepository<Account, Long> {
 }

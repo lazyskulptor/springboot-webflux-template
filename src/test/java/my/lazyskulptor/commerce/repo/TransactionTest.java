@@ -5,20 +5,17 @@ import static org.mockito.Mockito.*;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.converters.uni.UniReactorConverters;
+import me.lazyskulptor.hrsa.repository.SimpleHrsaRepository;
 import my.lazyskulptor.adapter.DemoTxManager;
-import my.lazyskulptor.adapter.SessionDispatcher;
-import my.lazyskulptor.commerce.DataHBTest;
 import my.lazyskulptor.commerce.IdEqualsSpec;
 import my.lazyskulptor.commerce.model.Account;
-import my.lazyskulptor.commerce.repo.impl.AccountCmdRepoImpl;
-import my.lazyskulptor.commerce.repo.impl.AccountRepositoryImpl;
 import my.lazyskulptor.commerce.spec.Logic;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.hibernate.reactive.mutiny.Mutiny;
 import org.hibernate.reactive.mutiny.impl.MutinySessionImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import reactor.core.publisher.Mono;
 
@@ -26,17 +23,16 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-@DataHBTest
+//@DataHBTest
+@SpringBootTest
 public class TransactionTest {
 
     @SpyBean
     private Mutiny.SessionFactory sessionFactory;
-    private AccountQueryRepository accountRepository;
-    private AccountCmdRepository accountCmd;
 
-    private SessionDispatcher demoDispatcher;
+    private SimpleHrsaRepository<Account, Long> accountRepository;
 
-    private Supplier<Account> accountFixture = () -> {
+    private final Supplier<Account> accountFixture = () -> {
         String email = RandomStringUtils.randomAlphanumeric(10) +
                 "@" +
                 RandomStringUtils.randomAlphanumeric(10);
@@ -50,16 +46,15 @@ public class TransactionTest {
 
     @BeforeEach
     void setup() {
-        this.demoDispatcher = new DemoTxManager(sessionFactory);
-        this.accountRepository = new AccountRepositoryImpl(demoDispatcher);
-        this.accountCmd = new AccountCmdRepoImpl(demoDispatcher);
+        this.accountRepository = new SimpleHrsaRepository<>(sessionFactory, new DemoTxManager(sessionFactory), Account.class);
+//        this.demoDispatcher = new DemoTxManager(sessionFactory);
     }
 
     @Test
     void testSave() {
         Account entity = accountFixture.get();
 
-        accountCmd.save(entity).block();
+        accountRepository.save(entity).block();
 
         assertThat(entity.getId()).isNotNull();
     }
@@ -69,8 +64,8 @@ public class TransactionTest {
         Account entity = accountFixture.get();
 
         var persisted = sessionFactory.withTransaction(session -> {
-            var mono = accountCmd.save(entity).log("AFTER SAVE")
-                    .then(accountCmd.flush().singleOptional()).log("ON FLUSH")
+            var mono = accountRepository.save(entity).log("AFTER SAVE")
+                    .then(accountRepository.flush().singleOptional()).log("ON FLUSH")
                     .flatMap(_saved -> accountRepository.findOne(new IdEqualsSpec(entity.getId()))).log("IN FLATMAP")
                     .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
             return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
@@ -85,7 +80,7 @@ public class TransactionTest {
         Account entity = accountFixture.get();
 
         var persisted = sessionFactory.withTransaction(session -> {
-            var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
+            var mono = accountRepository.saveAndFlush(entity).log("AFTER SAVE")
                     .flatMap(saved -> accountRepository.findOne(new IdEqualsSpec(saved.getId()))).log("IN FLATMAP")
                     .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
             return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
@@ -100,7 +95,7 @@ public class TransactionTest {
         Account entity = accountFixture.get();
 
         Account persisted = sessionFactory.withTransaction(session -> {
-            var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
+            var mono = accountRepository.saveAndFlush(entity).log("AFTER SAVE")
                     .then(Mono.defer(() -> accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN")))
                     .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
             return Uni.createFrom().converter(UniReactorConverters.fromMono(), mono);
@@ -129,7 +124,7 @@ public class TransactionTest {
         var prevCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
         Account persisted = Mono.usingWhen(sessionUni,
                         ssRefInCtx -> {
-                            var localsss = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
+                            var localsss = accountRepository.saveAndFlush(entity).log("AFTER SAVE")
                                     .then(Mono.defer(() -> accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN")));
                             return localsss;
                         },
@@ -164,7 +159,7 @@ public class TransactionTest {
         try {
             persisted = Mono.usingWhen(sessionUni,
                             sessRefInCtx -> {
-                                var localSess = accountCmd.saveAndFlush(entity)
+                                var localSess = accountRepository.saveAndFlush(entity)
                                         // Mono#then can't be used here to reference entity ID. Because IdEqualsSpec is already evaluated.
                                         .then(accountRepository.findOne(new IdEqualsSpec(entity.getId())));
                                 return localSess;
@@ -213,7 +208,7 @@ public class TransactionTest {
         var prevCnt = ((List<Account>) accountRepository.<Account>findList(Logic.TRUE, null).block()).size();
         try {
             persisted = sessionFactory.withTransaction(session -> {
-                var mono = accountCmd.saveAndFlush(entity).log("AFTER SAVE")
+                var mono = accountRepository.saveAndFlush(entity).log("AFTER SAVE")
                         // Mono#then can't be used here to reference entity ID. Because IdEqualsSpec is already evaluated.
                         .then(accountRepository.findOne(new IdEqualsSpec(entity.getId())).log("IN THEN"))
                         .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
@@ -236,7 +231,7 @@ public class TransactionTest {
 
         try {
             persisted = sessionFactory.withTransaction(session -> {
-                        var mono = accountCmd.saveAndFlush(entity)
+                        var mono = accountRepository.saveAndFlush(entity)
                                 .flatMap(saved -> accountRepository.findOne(new IdEqualsSpec(entity.getId())))
                                 .contextWrite(c -> c.put(DemoTxManager.SESSION_KEY, new AtomicReference(session)));
                         if (true)
